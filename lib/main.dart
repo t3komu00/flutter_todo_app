@@ -35,24 +35,117 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  final _sb = Supabase.instance.client;
+  final _text = TextEditingController();
+
+  Stream<List<Map<String, dynamic>>> _watchTodos() {
+    return _sb
+        .from('todos')
+        .stream(primaryKey: ['id'])
+        .order('created_at', ascending: false)
+        .map((rows) => List<Map<String, dynamic>>.from(rows));
+  }
+
+  Future<void> _add() async {
+    final t = _text.text.trim();
+    if (t.isEmpty) return;
+    await _sb.from('todos').insert({'task': t, 'is_done': false});
+    _text.clear();
+  }
+
+  Future<void> _toggle(int id, bool done) async {
+    await _sb.from('todos').update({'is_done': done}).eq('id', id);
+  }
+
+  Future<void> _delete(int id) async {
+    await _sb.from('todos').delete().eq('id', id);
+  }
+
+  @override
+  void dispose() {
+    _text.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Supabase Todo App")),
-      body: Center(
-        child: ElevatedButton(
-          onPressed: () async {
-            final supabase = Supabase.instance.client;
+      appBar: AppBar(title: const Text('Supabase Todo App')),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _text,
+                    decoration: const InputDecoration(
+                      hintText: 'Add a task…',
+                      border: OutlineInputBorder(),
+                    ),
+                    onSubmitted: (_) => _add(),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(onPressed: _add, child: const Text('Add')),
+              ],
+            ),
+          ),
+          Expanded(
+            child: StreamBuilder<List<Map<String, dynamic>>>(
+              stream: _watchTodos(),
+              builder: (context, snap) {
+                if (snap.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snap.hasError) {
+                  return Center(child: Text('Error: ${snap.error}'));
+                }
+                final todos = snap.data ?? [];
+                if (todos.isEmpty) {
+                  return const Center(child: Text('No todos yet'));
+                }
+                return ListView.separated(
+                  itemCount: todos.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (_, i) {
+                    final t = todos[i];
+                    final id = t['id'] as int;
+                    final title = (t['task'] as String?) ?? '';
+                    final done = (t['is_done'] as bool?) ?? false;
+                    final created = (t['created_at'] ?? '').toString();
 
-            // Test: fetch all todos
-            final response = await supabase.from('todos').select();
-            debugPrint("Todos: $response");
-          },
-          child: const Text("Fetch Todos"),
-        ),
+                    return ListTile(
+                      title: Text(
+                        title,
+                        style: TextStyle(
+                          decoration: done ? TextDecoration.lineThrough : null,
+                        ),
+                      ),
+                      subtitle: Text(created),
+                      leading: Checkbox(
+                        value: done,
+                        onChanged: (v) => _toggle(id, v ?? false),
+                      ),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete),
+                        onPressed: () => _delete(id),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
