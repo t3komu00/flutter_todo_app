@@ -7,7 +7,6 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   if (!kIsWeb) {
-    // Load .env only for mobile/desktop
     await dotenv.load(fileName: 'assets/env/app.env');
   }
 
@@ -45,27 +44,33 @@ class _HomePageState extends State<HomePage> {
   final _sb = Supabase.instance.client;
   final _text = TextEditingController();
 
-  Stream<List<Map<String, dynamic>>> _watchTodos() {
-    return _sb
-        .from('todos')
-        .stream(primaryKey: ['id'])
-        .order('created_at', ascending: false)
-        .map((rows) => List<Map<String, dynamic>>.from(rows));
-  }
+  //  CRUD FUNCTIONS
 
-  Future<void> _add() async {
+  /// CREATE
+  Future<void> _addTask() async {
     final t = _text.text.trim();
     if (t.isEmpty) return;
     await _sb.from('todos').insert({'task': t, 'is_done': false});
     _text.clear();
   }
 
-  Future<void> _toggle(int id, bool done) async {
+  /// UPDATE (toggle done)
+  Future<void> _toggleTask(int id, bool done) async {
     await _sb.from('todos').update({'is_done': done}).eq('id', id);
   }
 
-  Future<void> _delete(int id) async {
+  /// DELETE
+  Future<void> _deleteTask(int id) async {
     await _sb.from('todos').delete().eq('id', id);
+  }
+
+  /// READ (live stream)
+  Stream<List<Map<String, dynamic>>> _watchTasks() {
+    return _sb
+        .from('todos')
+        .stream(primaryKey: ['id'])
+        .order('created_at', ascending: false)
+        .map((rows) => List<Map<String, dynamic>>.from(rows));
   }
 
   @override
@@ -74,6 +79,7 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
+  //  UI
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -91,17 +97,17 @@ class _HomePageState extends State<HomePage> {
                       hintText: 'Add a task…',
                       border: OutlineInputBorder(),
                     ),
-                    onSubmitted: (_) => _add(),
+                    onSubmitted: (_) => _addTask(),
                   ),
                 ),
                 const SizedBox(width: 8),
-                ElevatedButton(onPressed: _add, child: const Text('Add')),
+                ElevatedButton(onPressed: _addTask, child: const Text('Add')),
               ],
             ),
           ),
           Expanded(
             child: StreamBuilder<List<Map<String, dynamic>>>(
-              stream: _watchTodos(),
+              stream: _watchTasks(),
               builder: (context, snap) {
                 if (snap.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -121,7 +127,6 @@ class _HomePageState extends State<HomePage> {
                     final id = t['id'] as int;
                     final title = (t['task'] as String?) ?? '';
                     final done = (t['is_done'] as bool?) ?? false;
-                    final created = (t['created_at'] ?? '').toString();
 
                     return ListTile(
                       title: Text(
@@ -130,14 +135,13 @@ class _HomePageState extends State<HomePage> {
                           decoration: done ? TextDecoration.lineThrough : null,
                         ),
                       ),
-                      subtitle: Text(created),
                       leading: Checkbox(
                         value: done,
-                        onChanged: (v) => _toggle(id, v ?? false),
+                        onChanged: (v) => _toggleTask(id, v ?? false),
                       ),
                       trailing: IconButton(
                         icon: const Icon(Icons.delete),
-                        onPressed: () => _delete(id),
+                        onPressed: () => _deleteTask(id),
                       ),
                     );
                   },

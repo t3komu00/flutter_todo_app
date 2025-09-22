@@ -1,0 +1,38 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Flutter Chrome (Supabase)",
+      "request": "launch",
+      "type": "dart",
+      "deviceId": "chrome",
+      "args": [
+        "--dart-define=SUPABASE_URL=https://smuuexxuhdolukvzbrga.supabase.co",
+        "--dart-define=SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNtdXVleHh1aGRvbHVrdnpicmdhIiwicm9zZSI6ImFub24iLCJpYXQiOjE3NTgxMDcxNTEsImV4cCI6MjA3MzY4MzE1MX0.L6wdSsGgm_Fbuhs6IEtHB9h8TyUrwKW0y_lShH6Jrzg"
+      ]
+    },
+    {
+      "name": "Flutter",
+      "type": "dart",
+      "request": "launch",
+      "program": "lib/main.dart"
+    },
+    {
+      "name": "todo_app",
+      "request": "launch",
+      "type": "dart"
+    },
+    {
+      "name": "todo_app (profile mode)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "profile"
+    },
+    {
+      "name": "todo_app (release mode)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "release"
+    }
+  ]
+}
